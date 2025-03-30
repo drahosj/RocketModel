@@ -87,10 +87,20 @@ end
 class AltitudeModel
   attr_reader :duration
   attr_reader :periods
+  attr_reader :rng
   def initialize alt=250000
     @alt = alt
     @periods = []
     @duration = 0
+    @rng = Random.new object_id
+  end
+
+  def reseed
+    @rng = Random.new object_id
+  end
+
+  def rand *args
+    @rng.rand *args
   end
 
   def generate interval: 100, jitter: 10
@@ -98,7 +108,11 @@ class AltitudeModel
     samples = []
     while t < duration
       samples << [t, self[t]]
-      t += interval - (jitter/2) + Random.rand(jitter)
+      unless jitter.nil?
+        t += interval - (jitter/2) + rand(jitter)
+      else 
+        t += interval
+      end
     end
     samples
   end
@@ -195,6 +209,7 @@ def run_rocket_with_model rocket, model, basename,
   basename = "sim-output/" + basename
   file_i = File.open(basename + '-input.dat', "w")
   file_alt = File.open(basename + '-alt.dat', "w")
+  file_alt2 = File.open(basename + '-alt2.dat', "w")
   file_vspeed = File.open(basename + '-vspeed.dat', "w")
   file_vspeed_i = File.open(basename + '-vspeed_unfiltered.dat', "w")
 
@@ -202,7 +217,7 @@ def run_rocket_with_model rocket, model, basename,
   t_last = 0
   10.times do
     t_last = t
-    t += interval - (jitter/2) + Random.rand(jitter)
+    t += interval - (jitter/2) + model.rand(jitter)
   end
 
   armed = false
@@ -227,34 +242,47 @@ def run_rocket_with_model rocket, model, basename,
 
     file_i.puts("#{t}\t#{s}")
     file_alt.puts("#{t}\t#{rocket.baro.alt}")
+    file_alt2.puts("#{t}\t#{rocket.baro.alt2}")
     file_vspeed.puts("#{t}\t#{rocket.baro.vspeed}")
     file_vspeed_i.puts("#{t}\t#{((s_last - s) * 1000)/(t_last - t)}")
 
     t_last = t
     s_last = s
-    t += interval - (jitter/2) + Random.rand(jitter)
+    t += interval - (jitter/2) + model.rand(jitter)
   end
 
   puts "Ran #{steps} steps to a time of #{t}"
 
   file_i.close
   file_alt.close
+  file_alt2.close
   file_vspeed.close
   file_vspeed_i.close
 end
 
-if __FILE__ == $0
+def load_tap_coefficients filename
+  taps = IO.readlines(filename).filter{|l| (/^#/ =~ l).nil?}.join(' ').split
+  taps = taps.map{|t| (t.to_f * (1 << 24)).to_i}
+end
+
+def basic_init
   model = standard_field_model
   model.profile('flight-profile.dat', noise: NoiseModel.new(:very_disturbed))
   model.level(60_000)
 
   rocket = Rocket::RocketState.new
   rocket.init
+  return model, rocket
+end
+
+if __FILE__ == $0
+  model, rocket = basic_init
   run_rocket_with_model rocket, model, 'default'
 
-  gnuplot_command = "plot 'sim-output/default-input.dat', "\
-    "'sim-output/default-alt.dat', 'sim-output/default-vspeed.dat', "\
-    "'sim-output/default-vspeed_unfiltered.dat';"
+  output_files = ['alt', 'alt2', 'vspeed', 'vspeed_unfiltered']
+  output_files.map!{|n| "'sim-output/default-#{n}.dat' with lines"}
+  output_files = output_files.join(", ")
+  gnuplot_command = "plot 'sim-output/default-input.dat', #{output_files};"
 
   `gnuplot -e "#{gnuplot_command}; pause -1"`
 end

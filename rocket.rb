@@ -83,12 +83,18 @@ module Rocket
     def run(s)
       Rocket.run_fir_filter(self, s)
     end
+
+    def set_coefficients(coffs)
+      self.ntaps=coffs.size
+      self.c.to_ptr.write_array_of_int32(coffs)
+    end
   end
 
   class BaroData < FFI::Struct
     include AttrAccessorHelper
 
     layout :alt, :int32,
+      :alt2, :int32,
       :alt_max, :int32,
       :alt_raw, :int32,
       :alt_raw_max, :int32,
@@ -101,6 +107,7 @@ module Rocket
       :alt_filter, FirFilter,
       :field_alt_interp, Interpolator,
       :field_alt_filter, FirFilter,
+      :apogee_detect_filter, FirFilter,
       :valid, :int
 
     def to_s

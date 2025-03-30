@@ -11,6 +11,7 @@ void init_state(struct rocket_state * state)
       init_interp(&state->baro.field_alt_interp, TICK_RATE/2);
       init_fir_filter(&state->baro.alt_filter, 20);
       init_fir_filter(&state->baro.field_alt_filter, 60);
+      init_fir_filter(&state->baro.apogee_detect_filter, 80);
 }
 
 int update_baro(struct rocket_state * state, int32_t raw_alt, uint64_t tick)
@@ -21,6 +22,7 @@ int update_baro(struct rocket_state * state, int32_t raw_alt, uint64_t tick)
       if (!state->baro.valid) {
             state->baro.valid = 1;
             state->baro.alt = raw_alt;
+            state->baro.alt2 = raw_alt;
             state->baro.alt_raw = raw_alt;
             state->baro.alt_field = raw_alt;
             state->baro.alt_max = raw_alt;
@@ -33,12 +35,18 @@ int update_baro(struct rocket_state * state, int32_t raw_alt, uint64_t tick)
 
       /* Advance filters */
       int32_t alt = state->baro.alt;
+	int32_t alt2 = state->baro.alt2;
       int32_t alt_i;
       uint64_t tick_i;
       while (get_interp(&state->baro.alt_interp, &alt_i, &tick_i)) {
             int32_t old_alt = alt;
             alt = run_fir_filter(&state->baro.alt_filter, alt_i);
             state->baro.vspeed = (alt - old_alt) * SAMPLE_RATE;
+
+            alt2 = run_fir_filter(&state->baro.apogee_detect_filter, alt);
+		if (alt2 > state->baro.alt_max) {
+			state->baro.alt_max = alt2;
+		}
       }
 
       if ((state->phase == ROCKET_PHASE_IDLE) ||
@@ -58,14 +66,11 @@ int update_baro(struct rocket_state * state, int32_t raw_alt, uint64_t tick)
 
       /* Update first-order data */
       state->baro.alt = alt;
+      state->baro.alt2 = alt2;
       state->baro.alt_raw = raw_alt;
       state->baro.tick = tick;
 
       /* Update maximums */
-      if (alt > state->baro.alt_max) {
-            state->baro.alt_max = alt;
-      }
-
       if (raw_alt > state->baro.alt_raw_max) {
             state->baro.alt_raw_max = raw_alt;
       }

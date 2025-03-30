@@ -66,6 +66,7 @@ struct gps_data {
 struct baro_data {
 	/* mm */
 	int32_t alt;
+	int32_t alt2;
 	int32_t alt_max;
 	int32_t alt_raw;
 	int32_t alt_raw_max;
@@ -86,6 +87,7 @@ struct baro_data {
 	struct fir_filter alt_filter;
 	struct interpolator field_alt_interp;
 	struct fir_filter field_alt_filter;
+	struct fir_filter apogee_detect_filter;
 
 	int valid;
 };
