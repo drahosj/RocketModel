@@ -25,9 +25,16 @@ struct interpolator {
 	int valid;
 };
 
+/* Coefficients are 8.24 fixed point
+ *
+ * Taps internally are 28.4 signed 
+ *
+ * Max value ~ 134_217_728
+ *
+ */
 struct fir_filter {
 	int ntaps;
-	int saturation;
+	int valid;
 	int32_t c[100];
 	int32_t taps[100];
 };

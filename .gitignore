@@ -1,0 +1,4 @@
+*.o
+*.so
+sim-output/*.dat
+*.swp

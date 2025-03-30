@@ -175,28 +175,32 @@ void init_fir_filter(struct fir_filter * filter, int ntaps)
 {
       memset(filter, 0, sizeof(struct fir_filter));
       filter->ntaps = ntaps;
+      int32_t window_tap = ((1 << 24) / ntaps);
       for (int i = 0; i < ntaps; i++) {
-            filter->c[i] = 1;
+            filter->c[i] = window_tap;
       }
 }
 
 int32_t run_fir_filter(struct fir_filter * filter, int32_t sample)
 {
       int64_t sum = 0;
-      int64_t divisor = 0;
+      sample = sample << 4;
 
-      if (filter->saturation < filter->ntaps) {
-            filter->saturation++;
+      if (!filter->valid) {
+	      for (int i = 0; i < filter->ntaps; i++) {
+		      filter->taps[i] = sample;
+	      }
+	      filter->valid = 1;
       }
 
-      for (int i = 0; i < filter->saturation; i++) {
-            int32_t c = filter->c[i];
-            sum += sample * c;
-            divisor += c;
+      for (int i = 0; i < filter->ntaps; i++) {
+            int64_t c = filter->c[i];
+            sum += (((int64_t) sample) * c);
 
             int32_t t = filter->taps[i];
             filter->taps[i] = sample;
             sample = t;
       }
-      return sum / divisor;
+
+      return sum >> 28;
 }
