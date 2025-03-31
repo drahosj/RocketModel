@@ -1,7 +1,9 @@
 all: librocket.so
 
-librocket.so: rocket_state.o
-	gcc -o librocket.so -shared rocket_state.o
+export CFLAGS=-Wall -Werror -fPIC -g
+
+librocket.so: rocket_state.o nmea.o
+	gcc -o librocket.so -shared rocket_state.o nmea.o
 
 clean:
 	rm -f *.o *.so

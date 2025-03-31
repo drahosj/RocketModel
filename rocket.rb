@@ -130,7 +130,7 @@ module Rocket
       :lon, :int32,
       :alt, :int32,
       :alt_max, :int32,
-      :time, :int64,
+      :time, :uint32,
       :tick, :uint64,
       :valid, :int
   end
@@ -161,6 +161,64 @@ module Rocket
     end
   end
 
+  NmeaState = enum [
+    :waiting,
+    :receiving
+  ]
+
+  class NmeaBuilder < FFI::Struct
+    include AttrAccessorHelper
+
+    layout :state, :int,
+      :buffer, [:char, 83],
+      :i, :int,
+      :callback, :pointer,
+      :callback_context, :pointer,
+      :completions, :uint32,
+      :overruns, :uint32,
+      :restarts, :uint32
+
+    def init
+      Rocket.init_nmea_builder self
+    end
+
+    def get_sentence
+      self.buffer.to_s
+    end
+
+    def put_chars str
+      ret = nil
+      str.each_byte do |c|
+        if Rocket.run_nmea_builder self, c
+          ret = get_sentence
+        end
+      end
+      ret
+    end
+  end
+
+  class NmeaRingbuf < FFI::Struct
+    include AttrAccessorHelper
+    layout :nput, :int64,
+      :nget, :int64,
+      :buffer, [:char, 8 * 83]  
+
+    def init
+      Rocket.nmea_ringbuf_init self
+    end
+
+    def put s
+      Rocket.nmea_ringbuf_put self, s
+    end
+
+    def get
+      s = FFI::MemoryPointer.new(:char, 83)
+      res = Rocket.nmea_ringbuf_get self, s.to_ptr
+      return nil if res == 0;
+      return s.read_string
+    end
+  end
+
   attach_function :init_state, [RocketState.by_ref], :void
   attach_function :update_baro, [RocketState.by_ref, :int32, :uint64], Phase
 
@@ -170,4 +228,29 @@ module Rocket
 
   attach_function :init_fir_filter, [FirFilter.by_ref, :int], :void
   attach_function :run_fir_filter, [FirFilter.by_ref, :int32], :int32
+
+  attach_function :init_nmea_builder, [NmeaBuilder.by_ref], :void
+  attach_function :run_nmea_builder, [NmeaBuilder.by_ref, :char], :int
+  attach_function :set_nmea_builder_callback, 
+    [NmeaBuilder.by_ref, :pointer, :pointer], :void
+
+  attach_function :nmea_ringbuf_init, [NmeaRingbuf.by_ref], :void
+  attach_function :nmea_ringbuf_put, [NmeaRingbuf.by_ref, :string], :int
+  attach_function :nmea_ringbuf_get, [NmeaRingbuf.by_ref, :pointer], :int
+
+  attach_function :nmea_parse, 
+    [:string, :pointer, :pointer, :pointer, :pointer], :int
+
+  def Rocket::parse_nmea s
+    lat = FFI::MemoryPointer.new(:int32)
+    lon = FFI::MemoryPointer.new(:int32)
+    time = FFI::MemoryPointer.new(:int32)
+    alt = FFI::MemoryPointer.new(:int32)
+    res = nmea_parse(s.dup, lat, lon, time, alt)
+    if res == 0
+      return lat.read_int32, lon.read_int32, time.read_int32, alt.read_int32
+    else
+      raise StandardError("NMEA Parse error #{res}")
+    end
+  end
 end

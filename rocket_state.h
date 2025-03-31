@@ -42,11 +42,11 @@ struct fir_filter {
 struct gps_data {
 	/* Position formats
 	 *
-	 * 0.001 fixed fractional minutes
+	 * 0.000_01 fixed fractional minutes
 	 *
-	 * fixed = (DDD * 60_000) + (MM.mmm * 1000)
-	 * DDD = floor(fixed / 60_000)
-	 * MM.mmm = (fixed % 60_000) / 1000
+	 * fixed = (DDD * 6_000_000) + (MM.mmm * 100_000)
+	 * DDD = floor(fixed / 6_000_000)
+	 * MM.mmm = (fixed % 6_000_000) / 100_000
 	 */
 	int32_t lat;
 	int32_t lon;
@@ -55,8 +55,8 @@ struct gps_data {
 	int32_t alt;
 	int32_t alt_max;
 
-	/* Unix time (UTC) */
-	int64_t time;
+	/* Time of UTC day milliseconds  */
+	uint32_t time;
 
 	uint64_t tick;
 

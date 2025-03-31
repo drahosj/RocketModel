@@ -58,12 +58,6 @@ int update_baro(struct rocket_state * state, int32_t raw_alt, uint64_t tick)
             }
       }
 
-      /* Get old data */
-      int32_t old_alt = state->baro.alt;
-      int64_t old_tick = state->baro.tick; 
-      int64_t tick_delta = tick - old_tick;
-      int64_t alt_delta = alt - old_alt;
-
       /* Update first-order data */
       state->baro.alt = alt;
       state->baro.alt2 = alt2;
