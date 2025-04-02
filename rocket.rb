@@ -238,19 +238,20 @@ module Rocket
   attach_function :nmea_ringbuf_put, [NmeaRingbuf.by_ref, :string], :int
   attach_function :nmea_ringbuf_get, [NmeaRingbuf.by_ref, :pointer], :int
 
-  attach_function :nmea_parse, 
-    [:string, :pointer, :pointer, :pointer, :pointer], :int
+  attach_function :gps_deg_to_fixed, [:int, :int, :int], :int32
+  attach_function :gps_fixed_to_deg_ipart, [:int32], :int
+  attach_function :gps_fixed_to_deg_fpart, [:int32, :int], :int
 
-  def Rocket::parse_nmea s
-    lat = FFI::MemoryPointer.new(:int32)
-    lon = FFI::MemoryPointer.new(:int32)
-    time = FFI::MemoryPointer.new(:int32)
-    alt = FFI::MemoryPointer.new(:int32)
-    res = nmea_parse(s.dup, lat, lon, time, alt)
-    if res == 0
-      return lat.read_int32, lon.read_int32, time.read_int32, alt.read_int32
-    else
-      raise StandardError("NMEA Parse error #{res}")
-    end
+  def self.gps_fixed_to_deg d, fbase=10_000_000
+    return gps_fixed_to_deg_ipart(d), gps_fixed_to_deg_fpart(d, fbase)
+  end
+
+  def self.gps_float_to_fixed f
+    return gps_deg_to_fixed(f.to_i, f.divmod(1).last * 10_000_000, 10_000_000)
+  end
+
+  def self.gps_fixed_to_float d
+    i, f = gps_fixed_to_deg d
+    return i.to_f + f.to_f / 10_000_000.0
   end
 end

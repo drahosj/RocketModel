@@ -1,5 +1,6 @@
 #include "rocket_state.h"
 #include <string.h>
+#include <assert.h>
 
 #define TICK_RATE 1000
 #define SAMPLE_RATE 40
@@ -202,4 +203,24 @@ int32_t run_fir_filter(struct fir_filter * filter, int32_t sample)
       }
 
       return sum >> 28;
+}
+
+int32_t gps_deg_to_fixed(int ipart, int fpart, int fbase)
+{
+      int64_t ret = ipart << 23;
+      assert(fbase <= 10000000);
+      assert(fpart < fbase);
+      ret |= (((int64_t) fpart) * ((int64_t) (1 << 23))) / ((int64_t) fbase);
+      return (int32_t) ret;
+}
+
+int gps_fixed_to_deg_ipart(int32_t deg)
+{
+      return deg >> 23;
+}
+
+int gps_fixed_to_deg_fpart(int32_t deg, int fbase)
+{
+      int64_t fpart = deg & 0x7fffff;
+      return (int32_t) (fpart * ((int64_t) fbase)) / ((int64_t) 1 << 23);
 }

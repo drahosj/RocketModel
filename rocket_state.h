@@ -40,13 +40,8 @@ struct fir_filter {
 };
 
 struct gps_data {
-	/* Position formats
-	 *
-	 * 0.000_01 fixed fractional minutes
-	 *
-	 * fixed = (DDD * 6_000_000) + (MM.mmm * 100_000)
-	 * DDD = floor(fixed / 6_000_000)
-	 * MM.mmm = (fixed % 6_000_000) / 100_000
+    /* Format: Fixed-point 9.23
+     *
 	 */
 	int32_t lat;
 	int32_t lon;
@@ -110,4 +105,8 @@ int get_interp(struct interpolator * interp, int32_t * sample, uint64_t * tick);
 
 void init_fir_filter(struct fir_filter *, int ntaps);
 int32_t run_fir_filter(struct fir_filter * filter, int32_t sample);
+
+int32_t gps_deg_to_fixed(int ipart, int fpart, int fbase);
+int gps_fixed_to_deg_ipart(int32_t fixed);
+int gps_fixed_to_deg_fpart(int32_t fixed, int fbase);
 #endif
