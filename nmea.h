@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef void (*nmea_callback)(char * str, void * ctx);
 
 enum nmea_state {
@@ -40,4 +44,7 @@ void set_nmea_builder_callback(
 		nmea_callback cb, 
 		void * ctx);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

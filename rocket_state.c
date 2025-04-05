@@ -18,7 +18,7 @@ void init_state(struct rocket_state * state)
 int update_baro(struct rocket_state * state, int32_t raw_alt, uint64_t tick)
 {
       int phase = state->phase;
-      
+
       /* Init case */
       if (!state->baro.valid) {
             state->baro.valid = 1;
@@ -36,7 +36,7 @@ int update_baro(struct rocket_state * state, int32_t raw_alt, uint64_t tick)
 
       /* Advance filters */
       int32_t alt = state->baro.alt;
-	int32_t alt2 = state->baro.alt2;
+      int32_t alt2 = state->baro.alt2;
       int32_t alt_i;
       uint64_t tick_i;
       while (get_interp(&state->baro.alt_interp, &alt_i, &tick_i)) {
@@ -45,9 +45,9 @@ int update_baro(struct rocket_state * state, int32_t raw_alt, uint64_t tick)
             state->baro.vspeed = (alt - old_alt) * SAMPLE_RATE;
 
             alt2 = run_fir_filter(&state->baro.apogee_detect_filter, alt);
-		if (alt2 > state->baro.alt_max) {
-			state->baro.alt_max = alt2;
-		}
+            if (alt2 > state->baro.alt_max) {
+                  state->baro.alt_max = alt2;
+            }
       }
 
       if ((state->phase == ROCKET_PHASE_IDLE) ||
@@ -187,10 +187,10 @@ int32_t run_fir_filter(struct fir_filter * filter, int32_t sample)
       sample = sample << 4;
 
       if (!filter->valid) {
-	      for (int i = 0; i < filter->ntaps; i++) {
-		      filter->taps[i] = sample;
-	      }
-	      filter->valid = 1;
+            for (int i = 0; i < filter->ntaps; i++) {
+                  filter->taps[i] = sample;
+            }
+            filter->valid = 1;
       }
 
       for (int i = 0; i < filter->ntaps; i++) {
@@ -205,22 +205,26 @@ int32_t run_fir_filter(struct fir_filter * filter, int32_t sample)
       return sum >> 28;
 }
 
-int32_t gps_deg_to_fixed(int ipart, int fpart, int fbase)
+int32_t gps_deg_to_fixed(int32_t ipart, int32_t fpart, int32_t fbase)
 {
       int64_t ret = ipart << 23;
-      assert(fbase <= 10000000);
       assert(fpart < fbase);
+      if (fbase > 10000000) {
+            int scale = fbase / 10000000;
+            fbase = fbase / scale;
+            fpart = fpart / scale;
+      }
       ret |= (((int64_t) fpart) * ((int64_t) (1 << 23))) / ((int64_t) fbase);
       return (int32_t) ret;
 }
 
-int gps_fixed_to_deg_ipart(int32_t deg)
+int32_t gps_fixed_to_deg_ipart(int32_t deg)
 {
       return deg >> 23;
 }
 
-int gps_fixed_to_deg_fpart(int32_t deg, int fbase)
+int32_t gps_fixed_to_deg_fpart(int32_t deg, int32_t fbase)
 {
       int64_t fpart = deg & 0x7fffff;
-      return (int32_t) (fpart * ((int64_t) fbase)) / ((int64_t) 1 << 23);
+      return (int) ((fpart * ((int64_t) fbase)) / ((int64_t) 1 << 23));
 }
