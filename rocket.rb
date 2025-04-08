@@ -242,6 +242,9 @@ module Rocket
   attach_function :gps_fixed_to_deg_ipart, [:int32], :int
   attach_function :gps_fixed_to_deg_fpart, [:int32, :int], :int
 
+  attach_function :gps_nmea_to_fixed, [:int32, :int], :int32
+  attach_function :gps_fixed_to_nmea, [:int32, :int], :int32
+
   def self.gps_fixed_to_deg d, fbase=10_000_000
     return gps_fixed_to_deg_ipart(d), gps_fixed_to_deg_fpart(d, fbase)
   end
@@ -253,5 +256,12 @@ module Rocket
   def self.gps_fixed_to_float d
     i, f = gps_fixed_to_deg d
     return i.to_f + f.to_f / 10_000_000.0
+  end
+
+  def self.gps_fixed_to_s fixed, n=5
+    nmea = gps_fixed_to_nmea fixed, n
+    deg = nmea / (10**(n+2))
+    min = (nmea.to_f / (10**n)) % 60
+    return "#{deg}° #{min}'"
   end
 end

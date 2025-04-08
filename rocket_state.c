@@ -226,5 +226,32 @@ int32_t gps_fixed_to_deg_ipart(int32_t deg)
 int32_t gps_fixed_to_deg_fpart(int32_t deg, int32_t fbase)
 {
       int64_t fpart = deg & 0x7fffff;
-      return (int) ((fpart * ((int64_t) fbase)) / ((int64_t) 1 << 23));
+      return (int32_t) ((fpart * ((int64_t) fbase)) / (0x7fffff));
+}
+
+int32_t gps_nmea_to_fixed(int32_t nmea, int n)
+{
+	assert(n < 6);
+	int32_t fbase = 1;
+	for (int i = 0; i < n; i++) {
+		fbase = fbase * 10;
+	}
+	int32_t fminutes = nmea % fbase;
+	nmea = nmea / fbase;
+	int32_t iminutes = nmea % 100;
+	int32_t degrees = nmea / 100;
+
+      int32_t fpart = ((iminutes * fbase) + fminutes) / 6;
+	return gps_deg_to_fixed(degrees, fpart, fbase * 10);
+}
+int32_t gps_fixed_to_nmea(int32_t fixed, int n)
+{
+	assert(n < 6);
+	int32_t fbase = 1;
+	for (int i = 0; i < n; i++) {
+		fbase = fbase * 10;
+	}
+      int32_t degrees = gps_fixed_to_deg_ipart(fixed);
+      int32_t fpart = gps_fixed_to_deg_fpart(fixed, fbase * 10);
+      return (degrees * fbase * 100) + (fpart * 6);
 }
